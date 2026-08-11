@@ -1,0 +1,13 @@
+# This config is merged on top of the existing configuration of the OpenTelemetry Demo's
+# own collector instance such that telemetry is forwarded to our custom collector instance.
+exporters:
+  otlp_grpc/explorviz_collector:
+    endpoint: otel-collector:55678
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs:
+      exporters:
+        - otlp_grpc/explorviz_collector
