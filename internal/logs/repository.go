@@ -2,6 +2,7 @@ package logs
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -11,34 +12,116 @@ type Repository struct {
 	Conn driver.Conn
 }
 
-// findEntityLogs searches the database for any logs belonging to the entity with the given telemetry key that occur
-// within the time span given by fromUnixNano (inclusive) and toUnixNano (exclusive). To restrict search for logs to
-// those associated with a specific commit, the commitHash value can be used. If left empty, then the search is
-// explicitly restricted to logs that have no associated commit.
-func (r *Repository) findEntityLogs(
-	ctx context.Context, landscapeToken string, telemetryKey string, fromUnixNano uint64, toUnixNano uint64, commitHash string,
-) ([]Log, error) {
+type LogSearchParams struct {
+	MessageBody *string
 
-	params := []any{
-		clickhouse.Named("landscapeToken", landscapeToken),
-		clickhouse.Named("telemetryKey", telemetryKey),
-		clickhouse.Named("from", fromUnixNano),
-		clickhouse.Named("to", toUnixNano),
-		clickhouse.Named("commit", commitHash),
+	TelemetryKey *string
+	ServiceName  *string
+
+	MinSeverity  *uint64
+	MaxSeverity  *uint64
+	SeverityText *string
+
+	FromUnixNano *uint64
+	ToUnixNano   *uint64
+	CommitHash   *string
+	TraceID      *string
+	SpanID       *string
+}
+
+// findLogs searches the database for logs associated with the given landscape. The search space can be restricted using
+// a variety of filter options (see [LogSearchParams]). A limit and an offset can be specified for pagination.
+func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params LogSearchParams, limit uint64, offset uint64) ([]Log, error) {
+	queryParams := make([]any, 0, 11)
+	var conditions strings.Builder
+
+	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
+
+	if params.MessageBody != nil {
+		conditions.WriteString(" AND hasAllTokens(Body, @messageBody)")
+		queryParams = append(queryParams, clickhouse.Named("messageBody", *params.MessageBody))
+	}
+
+	if params.TelemetryKey != nil {
+		conditions.WriteString(" AND ExplorvizTelemetryKey = @telemetryKey")
+		queryParams = append(queryParams, clickhouse.Named("telemetryKey", *params.TelemetryKey))
+	}
+
+	if params.ServiceName != nil {
+		conditions.WriteString(" AND ServiceName = @serviceName")
+		queryParams = append(queryParams, clickhouse.Named("serviceName", *params.ServiceName))
+	}
+
+	if params.MinSeverity != nil {
+		conditions.WriteString(" AND SeverityNumber >= @minSeverity")
+		queryParams = append(queryParams, clickhouse.Named("minSeverity", *params.MinSeverity))
+	}
+
+	if params.MaxSeverity != nil {
+		conditions.WriteString(" AND SeverityNumber <= @maxSeverity")
+		queryParams = append(queryParams, clickhouse.Named("maxSeverity", *params.MaxSeverity))
+	}
+
+	if params.SeverityText != nil {
+		conditions.WriteString(" AND SeverityText = @severityText")
+		queryParams = append(queryParams, clickhouse.Named("severityText", *params.SeverityText))
+	}
+
+	if params.FromUnixNano != nil {
+		conditions.WriteString(" AND Timestamp >= @from")
+		queryParams = append(queryParams, clickhouse.Named("from", *params.FromUnixNano))
+	}
+
+	if params.ToUnixNano != nil {
+		conditions.WriteString(" AND Timestamp < @to")
+		queryParams = append(queryParams, clickhouse.Named("to", *params.ToUnixNano))
+	}
+
+	if params.CommitHash != nil {
+		conditions.WriteString(" AND CommitHash = @commitHash")
+		queryParams = append(queryParams, clickhouse.Named("commitHash", *params.CommitHash))
+	}
+
+	if params.TraceID != nil {
+		conditions.WriteString("AND TraceId = @traceId")
+		queryParams = append(queryParams, clickhouse.Named("traceId", *params.TraceID))
+	}
+
+	if params.SpanID != nil {
+		conditions.WriteString("AND SpanId = @spanId")
+		queryParams = append(queryParams, clickhouse.Named("spanId", *params.SpanID))
+	}
+
+	queryLimit := ""
+	if limit > 0 {
+		queryLimit = " LIMIT @limit"
+		queryParams = append(queryParams, clickhouse.Named("limit", limit))
+	}
+	if offset > 0 {
+		queryLimit += " OFFSET @offset"
+		queryParams = append(queryParams, clickhouse.Named("offset", offset))
 	}
 
 	logs := []Log{}
 
 	err := r.Conn.Select(ctx, &logs, `
-		SELECT *
+		SELECT
+			toString(LogId) AS ID,
+			Body AS MessageBody,
+			ExplorvizTelemetryKey AS TelemetryKey,
+			ServiceName,
+			SeverityNumber AS Severity,
+			SeverityText,
+			Timestamp_ns AS TimeUnixNano,
+			TraceId AS TraceID,
+			SpanId AS SpanID,
+			EventName,
+			LogAttributes AS LogAttribs,
+			ResourceAttributes AS ResourceAttribs
 		FROM otel_logs
 		WHERE
 			ExplorvizTokenId = @landscapeToken
-			AND ExplorvizVizObjectId = @telemetryKey
-			AND Timestamp_ns >= @from
-			AND Timestamp_ns < @to
-			AND coalesce(CommitHash, '') = @commit
-	`, params...)
+			`+conditions.String()+queryLimit, queryParams...)
 	if err != nil {
 		return []Log{}, err
 	}

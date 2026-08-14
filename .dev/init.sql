@@ -1,5 +1,6 @@
 -- Modified version of the schema from the ClickHouse exporter:
 -- https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/clickhouseexporter/internal/sqltemplates/logs_table.sql
+
 CREATE TABLE IF NOT EXISTS otel_logs (
     `Timestamp` DateTime64(9) COMMENT 'Event timestamp with nanosecond precision' CODEC(Delta(8), ZSTD(1)),
     `TraceId` String COMMENT 'W3C trace identifier' CODEC(ZSTD(1)),
@@ -18,11 +19,14 @@ CREATE TABLE IF NOT EXISTS otel_logs (
     `LogAttributes` Map(LowCardinality(String), String) COMMENT 'Log record attributes' CODEC(ZSTD(1)),
     `EventName` String COMMENT 'Event name for log records representing events' CODEC(ZSTD(1)),
 
+    -- Custom columns for ExplorViz
+    `LogId` UUID DEFAULT generateUUIDv4(),
+
     -- Materialized columns for ExplorViz
     Timestamp_ns Int64 MATERIALIZED toUnixTimestamp64Nano(Timestamp),
     CommitHash String MATERIALIZED LogAttributes['vcs.ref.head.revision'],
     ExplorvizEntityId String MATERIALIZED LogAttributes['explorviz.entity.id'],
-    ExplorvizVizObjectId String MATERIALIZED LogAttributes['explorviz.vizobject.id'],
+    ExplorvizTelemetryKey String MATERIALIZED LogAttributes['explorviz.entity.telemetrykey'],
     ExplorvizTokenId String MATERIALIZED LogAttributes['explorviz.token.id'],
     ExplorvizFuncName String MATERIALIZED LogAttributes['explorviz.code.function.name'],
 
