@@ -18,6 +18,7 @@ func NewHandler(r Repository) Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/logs", h.getLandscapeLogs)
+	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/log-levels", h.getLandscapeLogLevels)
 	mux.HandleFunc("GET /v3/landscapes/{landscapeToken}/entities/{telemetryKey}/logs", h.getEntityLogs)
 }
 
@@ -88,6 +89,25 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(logs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) getLandscapeLogLevels(w http.ResponseWriter, r *http.Request) {
+	lt := r.PathValue("landscapeToken")
+	if lt == "" {
+		http.Error(w, "Missing or invalid landscape token in path parameter", http.StatusBadRequest)
+		return
+	}
+
+	levels, err := h.repo.findLogLevels(r.Context(), lt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(levels); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

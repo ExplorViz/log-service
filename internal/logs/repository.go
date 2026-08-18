@@ -2,6 +2,7 @@ package logs
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -127,4 +128,37 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	}
 
 	return logs, nil
+}
+
+// findLogLevels searches the database for every distinct log level text that occurs within a given landscape.
+func (r *Repository) findLogLevels(ctx context.Context, landscapeToken string) ([]string, error) {
+	rows, err := r.Conn.Query(ctx, `
+		SELECT DISTINCT SeverityText
+		FROM otel_logs
+		WHERE ExplorvizTokenId = @landscapeToken
+		`, clickhouse.Named("landscapeToken", landscapeToken))
+	if err != nil {
+		return []string{}, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			fmt.Println("failed to close rows object")
+		}
+	}()
+
+	var severities []string
+
+	for rows.Next() {
+		var severityName string
+		if err := rows.Scan(&severityName); err != nil {
+			return []string{}, err
+		}
+
+		if severityName != "" {
+			severities = append(severities, severityName)
+		}
+	}
+
+	return severities, nil
 }
