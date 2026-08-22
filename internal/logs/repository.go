@@ -147,7 +147,7 @@ func (r *Repository) findLogLevels(ctx context.Context, landscapeToken string) (
 		}
 	}()
 
-	var severities []string
+	severities := []string{}
 
 	for rows.Next() {
 		var severityName string
