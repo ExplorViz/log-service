@@ -32,43 +32,38 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := LogSearchParams{}
 
-	msgBody := query.Get("messageBody")
-	if msgBody != "" {
+	if msgBody := query.Get("messageBody"); msgBody != "" {
 		params.MessageBody = &msgBody
 	}
 
-	serviceName := query.Get("serviceName")
-	if serviceName != "" {
+	params.IncludeAttribKeys = query.Get("includeAttributeKeys") != ""
+	params.IncludeAttribVals = query.Get("includeAttributeValues") != ""
+
+	if serviceName := query.Get("serviceName"); serviceName != "" {
 		params.ServiceName = &serviceName
 	}
 
-	minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8)
-	if err == nil {
+	if minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8); err == nil {
 		params.MinSeverity = &minSeverity
 	}
 
-	maxSeverity, err := strconv.ParseUint(query.Get("maxSeverity"), 10, 8)
-	if err == nil {
+	if maxSeverity, err := strconv.ParseUint(query.Get("maxSeverity"), 10, 8); err == nil {
 		params.MaxSeverity = &maxSeverity
 	}
 
-	severityText := query.Get("severityText")
-	if severityText != "" {
+	if severityText := query.Get("severityText"); severityText != "" {
 		params.SeverityText = &severityText
 	}
 
-	from, err := strconv.ParseUint(query.Get("from"), 10, 64)
-	if err == nil {
+	if from, err := strconv.ParseUint(query.Get("from"), 10, 64); err == nil {
 		params.FromUnixNano = &from
 	}
 
-	to, err := strconv.ParseUint(query.Get("to"), 10, 64)
-	if err == nil {
+	if to, err := strconv.ParseUint(query.Get("to"), 10, 64); err == nil {
 		params.ToUnixNano = &to
 	}
 
-	commit := query.Get("commit")
-	if commit != "" {
+	if commit := query.Get("commit"); commit != "" {
 		params.CommitHash = &commit
 	}
 
@@ -129,43 +124,38 @@ func (h *Handler) getEntityLogs(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := LogSearchParams{}
 
-	msgBody := query.Get("messageBody")
-	if msgBody != "" {
+	if msgBody := query.Get("messageBody"); msgBody != "" {
 		params.MessageBody = &msgBody
 	}
 
-	serviceName := query.Get("serviceName")
-	if serviceName != "" {
+	params.IncludeAttribKeys = query.Get("includeAttributeKeys") != ""
+	params.IncludeAttribVals = query.Get("includeAttributeValues") != ""
+
+	if serviceName := query.Get("serviceName"); serviceName != "" {
 		params.ServiceName = &serviceName
 	}
 
-	minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8)
-	if err == nil {
+	if minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8); err == nil {
 		params.MinSeverity = &minSeverity
 	}
 
-	maxSeverity, err := strconv.ParseUint(query.Get("maxSeverity"), 10, 8)
-	if err == nil {
+	if maxSeverity, err := strconv.ParseUint(query.Get("maxSeverity"), 10, 8); err == nil {
 		params.MinSeverity = &maxSeverity
 	}
 
-	severityText := query.Get("severityText")
-	if severityText != "" {
+	if severityText := query.Get("severityText"); severityText != "" {
 		params.SeverityText = &severityText
 	}
 
-	from, err := strconv.ParseUint(query.Get("from"), 10, 64)
-	if err == nil {
+	if from, err := strconv.ParseUint(query.Get("from"), 10, 64); err == nil {
 		params.FromUnixNano = &from
 	}
 
-	to, err := strconv.ParseUint(query.Get("to"), 10, 64)
-	if err == nil {
+	if to, err := strconv.ParseUint(query.Get("to"), 10, 64); err == nil {
 		params.ToUnixNano = &to
 	}
 
-	commit := query.Get("commit")
-	if commit != "" {
+	if commit := query.Get("commit"); commit != "" {
 		params.CommitHash = &commit
 	}
 

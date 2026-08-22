@@ -14,7 +14,9 @@ type Repository struct {
 }
 
 type LogSearchParams struct {
-	MessageBody *string
+	MessageBody       *string
+	IncludeAttribKeys bool
+	IncludeAttribVals bool
 
 	TelemetryKey *string
 	ServiceName  *string
@@ -39,8 +41,27 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
 
 	if params.MessageBody != nil {
-		conditions.WriteString(" AND hasAllTokens(Body, @messageBody)")
+		conditions.WriteString(" AND (hasAllTokens(Body, @messageBody)")
 		queryParams = append(queryParams, clickhouse.Named("messageBody", *params.MessageBody))
+
+		if params.IncludeAttribKeys {
+			conditions.WriteString(`
+				OR (
+					hasAllTokens(mapKeys(LogAttributes), @messageBody)
+					OR hasAllTokens(mapKeys(ScopeAttributes), @messageBody)
+					OR hasAllTokens(mapKeys(ResourceAttributes), @messageBody)
+				)`)
+		}
+
+		if params.IncludeAttribVals {
+			conditions.WriteString(`
+				OR (
+					hasAllTokens(mapValues(LogAttributes), @messageBody)
+					OR hasAllTokens(mapValues(ScopeAttributes), @messageBody)
+					OR hasAllTokens(mapValues(ResourceAttributes), @messageBody)
+				)`)
+		}
+		conditions.WriteString(")")
 	}
 
 	if params.TelemetryKey != nil {
