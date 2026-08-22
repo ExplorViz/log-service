@@ -31,13 +31,13 @@ CREATE TABLE IF NOT EXISTS otel_logs (
     ExplorvizFuncName String MATERIALIZED LogAttributes['explorviz.code.function.name'],
 
     INDEX idx_trace_id TraceId TYPE text(tokenizer = 'array'),
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE text(tokenizer = 'array'),
-    INDEX idx_lower_body lower(Body) TYPE text(tokenizer = 'splitByNonAlpha')
+    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapKeys(ResourceAttributes))),
+    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapValues(ResourceAttributes))),
+    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapKeys(ScopeAttributes))),
+    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapValues(ScopeAttributes))),
+    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapKeys(LogAttributes))),
+    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE text(tokenizer = 'array', preprocessor = lower(mapValues(LogAttributes))),
+    INDEX idx_lower_body Body TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(Body))
 ) ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (toStartOfFiveMinutes(Timestamp), ServiceName, Timestamp)
