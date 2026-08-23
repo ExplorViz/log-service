@@ -105,12 +105,12 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	}
 
 	if params.TraceID != nil {
-		conditions.WriteString("AND TraceId = @traceId")
+		conditions.WriteString(" AND TraceId = @traceId")
 		queryParams = append(queryParams, clickhouse.Named("traceId", *params.TraceID))
 	}
 
 	if params.SpanID != nil {
-		conditions.WriteString("AND SpanId = @spanId")
+		conditions.WriteString(" AND SpanId = @spanId")
 		queryParams = append(queryParams, clickhouse.Named("spanId", *params.SpanID))
 	}
 

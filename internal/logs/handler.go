@@ -55,6 +55,14 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 		params.SeverityText = &severityText
 	}
 
+	if traceID := query.Get("traceId"); traceID != "" {
+		params.TraceID = &traceID
+	}
+
+	if spanID := query.Get("spanId"); spanID != "" {
+		params.SpanID = &spanID
+	}
+
 	if from, err := strconv.ParseUint(query.Get("from"), 10, 64); err == nil {
 		params.FromUnixNano = &from
 	}
@@ -153,6 +161,14 @@ func (h *Handler) getEntityLogs(w http.ResponseWriter, r *http.Request) {
 
 	if to, err := strconv.ParseUint(query.Get("to"), 10, 64); err == nil {
 		params.ToUnixNano = &to
+	}
+
+	if traceID := query.Get("traceId"); traceID != "" {
+		params.TraceID = &traceID
+	}
+
+	if spanID := query.Get("spanId"); spanID != "" {
+		params.SpanID = &spanID
 	}
 
 	if commit := query.Get("commit"); commit != "" {
