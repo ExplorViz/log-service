@@ -30,7 +30,17 @@ type LogSearchParams struct {
 	CommitHash   *string
 	TraceID      *string
 	SpanID       *string
+
+	SortBy LogSearchSorting
 }
+
+type LogSearchSorting int
+
+const (
+	SortNewest LogSearchSorting = iota
+	SortOldest
+	SortHighestSeverity
+)
 
 // findLogs searches the database for logs associated with the given landscape. The search space can be restricted using
 // a variety of filter options (see [LogSearchParams]). A limit and an offset can be specified for pagination.
@@ -114,6 +124,16 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 		queryParams = append(queryParams, clickhouse.Named("spanId", *params.SpanID))
 	}
 
+	ordering := " ORDER BY "
+	switch params.SortBy {
+	case SortNewest:
+		ordering += "Timestamp DESC"
+	case SortOldest:
+		ordering += "Timestamp ASC"
+	case SortHighestSeverity:
+		ordering += "SeverityNumber DESC, Timestamp DESC"
+	}
+
 	queryLimit := ""
 	if limit > 0 {
 		queryLimit = " LIMIT @limit"
@@ -143,7 +163,7 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 		FROM otel_logs
 		WHERE
 			ExplorvizTokenId = @landscapeToken
-			`+conditions.String()+queryLimit, queryParams...)
+			`+conditions.String()+ordering+queryLimit, queryParams...)
 	if err != nil {
 		return []Log{}, err
 	}

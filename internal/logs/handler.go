@@ -2,6 +2,7 @@ package logs
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -73,6 +74,18 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 
 	if commit := query.Get("commit"); commit != "" {
 		params.CommitHash = &commit
+	}
+
+	switch sortBy := query.Get("sortBy"); sortBy {
+	case "", "newest":
+		params.SortBy = SortNewest
+	case "oldest":
+		params.SortBy = SortOldest
+	case "severity":
+		params.SortBy = SortHighestSeverity
+	default:
+		http.Error(w, fmt.Sprintf(`Invalid value %s for parameter "sortBy"`, sortBy), http.StatusBadRequest)
+		return
 	}
 
 	limit, err := strconv.ParseUint(query.Get("limit"), 10, 64)
