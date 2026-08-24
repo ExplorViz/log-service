@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -32,6 +33,12 @@ type LogSearchParams struct {
 	SpanID       *string
 
 	SortBy LogSearchSorting
+
+	// Limits the number of retrieved rows, for use with paginiation.
+	Limit *uint64
+
+	// Specifies the last received log from the previous request.
+	Cursor *LogSearchCursor
 }
 
 type LogSearchSorting int
@@ -42,10 +49,18 @@ const (
 	SortHighestSeverity
 )
 
+// A LogSearchCursor specifies the last seen log from a prior request.
+// This can be used for pagination.
+type LogSearchCursor struct {
+	LogID          string
+	Timestamp      uint64
+	SeverityNumber uint64
+}
+
 // findLogs searches the database for logs associated with the given landscape. The search space can be restricted using
-// a variety of filter options (see [LogSearchParams]). A limit and an offset can be specified for pagination.
-func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params LogSearchParams, limit uint64, offset uint64) ([]Log, error) {
-	queryParams := make([]any, 0, 11)
+// a variety of filter options (see [LogSearchParams]). A limit can be specified for pagination.
+func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params LogSearchParams, limit uint64) ([]Log, error) {
+	queryParams := make([]any, 0, 15)
 	var conditions strings.Builder
 
 	queryParams = append(queryParams, clickhouse.Named("landscapeToken", landscapeToken))
@@ -124,24 +139,60 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 		queryParams = append(queryParams, clickhouse.Named("spanId", *params.SpanID))
 	}
 
-	ordering := " ORDER BY "
+	if params.Cursor != nil {
+		switch params.SortBy {
+		case SortNewest:
+			conditions.WriteString(`
+				AND (
+					Timestamp_ns < @cursorTimestamp
+					OR (Timestamp_ns = @cursorTimestamp AND LogId > @cursorId)
+				)`)
+		case SortOldest:
+			conditions.WriteString(`
+				AND (
+					Timestamp_ns > @cursorTimestamp
+					OR (Timestamp_ns = @cursorTimestamp AND LogId > @cursorId)
+				)`)
+
+		case SortHighestSeverity:
+			conditions.WriteString(`
+				AND (
+					SeverityNumber < @cursorSeverity
+					OR (
+						SeverityNumber = @cursorSeverity
+						AND (
+							Timestamp_ns < @cursorTimestamp
+							OR (Timestamp_ns = @cursorTimestamp AND LogId > @cursorId)
+						)
+					)
+				)`)
+		default:
+			slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
+		}
+
+		queryParams = append(queryParams,
+			clickhouse.Named("cursorId", params.Cursor.LogID),
+			clickhouse.Named("cursorTimestamp", params.Cursor.Timestamp),
+			clickhouse.Named("cursorSeverity", params.Cursor.SeverityNumber),
+		)
+	}
+
+	ordering := ""
 	switch params.SortBy {
 	case SortNewest:
-		ordering += "Timestamp DESC"
+		ordering += " ORDER BY Timestamp_ns DESC, LogId ASC"
 	case SortOldest:
-		ordering += "Timestamp ASC"
+		ordering += " ORDER BY Timestamp_ns ASC, LogId ASC"
 	case SortHighestSeverity:
-		ordering += "SeverityNumber DESC, Timestamp DESC"
+		ordering += " ORDER BY SeverityNumber DESC, Timestamp_ns DESC, LogId ASC"
+	default:
+		slog.Error("Received invalid sorting order", "SortBy", params.SortBy)
 	}
 
 	queryLimit := ""
 	if limit > 0 {
 		queryLimit = " LIMIT @limit"
 		queryParams = append(queryParams, clickhouse.Named("limit", limit))
-	}
-	if offset > 0 {
-		queryLimit += " OFFSET @offset"
-		queryParams = append(queryParams, clickhouse.Named("offset", offset))
 	}
 
 	logs := []Log{}
