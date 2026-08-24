@@ -115,12 +115,12 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	}
 
 	if params.FromUnixNano != nil {
-		conditions.WriteString(" AND Timestamp >= @from")
+		conditions.WriteString(" AND Timestamp_ns >= @from")
 		queryParams = append(queryParams, clickhouse.Named("from", *params.FromUnixNano))
 	}
 
 	if params.ToUnixNano != nil {
-		conditions.WriteString(" AND Timestamp < @to")
+		conditions.WriteString(" AND Timestamp_ns < @to")
 		queryParams = append(queryParams, clickhouse.Named("to", *params.ToUnixNano))
 	}
 
