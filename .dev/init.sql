@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS otel_logs (
     `EventName` String COMMENT 'Event name for log records representing events' CODEC(ZSTD(1)),
 
     -- Custom columns for ExplorViz
-    `LogId` UUID DEFAULT generateUUIDv4(),
+    `LogId` String DEFAULT toString(generateUUIDv4()),
 
     -- Materialized columns for ExplorViz
     Timestamp_ns Int64 MATERIALIZED toUnixTimestamp64Nano(Timestamp),

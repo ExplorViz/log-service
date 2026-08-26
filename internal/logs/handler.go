@@ -93,12 +93,34 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 		limit = 0
 	}
 
-	offset, err := strconv.ParseUint(query.Get("offset"), 10, 64)
-	if err != nil {
-		offset = 0
+	cursorID := query.Get("cursorId")
+	cursorTs := query.Get("cursorTimestamp")
+	cursorSev := query.Get("cursorSeverity")
+
+	if cursorID != "" && cursorTs != "" && cursorSev != "" {
+		var parsedTs uint64
+		if parsedTs, err = strconv.ParseUint(cursorTs, 10, 64); err != nil {
+			http.Error(w, "Cursor timestamp is not valid Uint64", http.StatusBadRequest)
+			return
+		}
+
+		var parsedSev uint64
+		if parsedSev, err = strconv.ParseUint(cursorSev, 10, 64); err != nil {
+			http.Error(w, "Cursor severity is not valid Uint64", http.StatusBadRequest)
+			return
+		}
+
+		params.Cursor = &LogSearchCursor{
+			LogID:          cursorID,
+			Timestamp:      parsedTs,
+			SeverityNumber: parsedSev,
+		}
+	} else if cursorID != "" || cursorTs != "" || cursorSev != "" {
+		http.Error(w, "Provided some, but not all cursor values", http.StatusBadRequest)
+		return
 	}
 
-	logs, err := h.repo.findLogs(r.Context(), lt, params, limit, offset)
+	logs, err := h.repo.findLogs(r.Context(), lt, params, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -193,12 +215,34 @@ func (h *Handler) getEntityLogs(w http.ResponseWriter, r *http.Request) {
 		limit = 0
 	}
 
-	offset, err := strconv.ParseUint(query.Get("offset"), 10, 64)
-	if err != nil {
-		offset = 0
+	cursorID := query.Get("cursorId")
+	cursorTs := query.Get("cursorTimestamp")
+	cursorSev := query.Get("cursorSeverity")
+
+	if cursorID != "" && cursorTs != "" && cursorSev != "" {
+		var parsedTs uint64
+		if parsedTs, err = strconv.ParseUint(cursorTs, 10, 64); err != nil {
+			http.Error(w, "Cursor timestamp is not valid Uint64", http.StatusBadRequest)
+			return
+		}
+
+		var parsedSev uint64
+		if parsedSev, err = strconv.ParseUint(cursorSev, 10, 64); err != nil {
+			http.Error(w, "Cursor severity is not valid Uint64", http.StatusBadRequest)
+			return
+		}
+
+		params.Cursor = &LogSearchCursor{
+			LogID:          cursorID,
+			Timestamp:      parsedTs,
+			SeverityNumber: parsedSev,
+		}
+	} else if cursorID != "" || cursorTs != "" || cursorSev != "" {
+		http.Error(w, "Provided some, but not all cursor values", http.StatusBadRequest)
+		return
 	}
 
-	logs, err := h.repo.findLogs(r.Context(), lt, params, limit, offset)
+	logs, err := h.repo.findLogs(r.Context(), lt, params, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
