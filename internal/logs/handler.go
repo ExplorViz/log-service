@@ -44,6 +44,10 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 		params.ServiceName = &serviceName
 	}
 
+	if telemetryKey := query.Get("telemetryKey"); telemetryKey != "" {
+		params.TelemetryKey = &telemetryKey
+	}
+
 	if minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8); err == nil {
 		params.MinSeverity = &minSeverity
 	}
