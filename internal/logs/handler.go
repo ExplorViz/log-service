@@ -30,53 +30,20 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := r.URL.Query()
-	params := LogSearchParams{}
-
-	if msgBody := query.Get("messageBody"); msgBody != "" {
-		params.MessageBody = &msgBody
-	}
-
-	params.IncludeAttribKeys = query.Get("includeAttributeKeys") != ""
-	params.IncludeAttribVals = query.Get("includeAttributeValues") != ""
-
-	if serviceName := query.Get("serviceName"); serviceName != "" {
-		params.ServiceName = &serviceName
-	}
-
-	if telemetryKey := query.Get("telemetryKey"); telemetryKey != "" {
-		params.TelemetryKey = &telemetryKey
-	}
-
-	if minSeverity, err := strconv.ParseUint(query.Get("minSeverity"), 10, 8); err == nil {
-		params.MinSeverity = &minSeverity
-	}
-
-	if maxSeverity, err := strconv.ParseUint(query.Get("maxSeverity"), 10, 8); err == nil {
-		params.MaxSeverity = &maxSeverity
-	}
-
-	if severityText := query.Get("severityText"); severityText != "" {
-		params.SeverityText = &severityText
-	}
-
-	if traceID := query.Get("traceId"); traceID != "" {
-		params.TraceID = &traceID
-	}
-
-	if spanID := query.Get("spanId"); spanID != "" {
-		params.SpanID = &spanID
-	}
-
-	if from, err := strconv.ParseUint(query.Get("from"), 10, 64); err == nil {
-		params.FromUnixNano = &from
-	}
-
-	if to, err := strconv.ParseUint(query.Get("to"), 10, 64); err == nil {
-		params.ToUnixNano = &to
-	}
-
-	if commit := query.Get("commit"); commit != "" {
-		params.CommitHash = &commit
+	params := LogSearchParams{
+		MessageBody:       strOrNil(query.Get("messageBody")),
+		IncludeAttribKeys: query.Get("includeAttributeKeys") != "",
+		IncludeAttribVals: query.Get("includeAttributeValues") != "",
+		ServiceName:       strOrNil(query.Get("serviceName")),
+		TelemetryKey:      strOrNil(query.Get("telemetryKey")),
+		MinSeverity:       parseUintOrNil(query.Get("minSeverity")),
+		MaxSeverity:       parseUintOrNil(query.Get("maxSeverity")),
+		SeverityText:      strOrNil(query.Get("severityText")),
+		TraceID:           strOrNil(query.Get("traceId")),
+		SpanID:            strOrNil(query.Get("spanId")),
+		FromUnixNano:      parseUintOrNil(query.Get("from")),
+		ToUnixNano:        parseUintOrNil(query.Get("to")),
+		CommitHash:        strOrNil(query.Get("commit")),
 	}
 
 	switch sortBy := query.Get("sortBy"); sortBy {
@@ -152,4 +119,19 @@ func (h *Handler) getLandscapeLogLevels(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func strOrNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func parseUintOrNil(s string) *uint64 {
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return nil
+	}
+	return &v
 }
