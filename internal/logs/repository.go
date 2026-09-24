@@ -198,7 +198,7 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	logs := []Log{}
 
 	err := r.Conn.Select(ctx, &logs, `
-		SELECT
+		SELECT DISTINCT
 			toString(LogId) AS ID,
 			Body AS MessageBody,
 			ExplorvizTelemetryKey AS TelemetryKey,
