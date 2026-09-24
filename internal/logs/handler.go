@@ -32,8 +32,8 @@ func (h *Handler) getLandscapeLogs(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	params := LogSearchParams{
 		MessageBody:       strOrNil(query.Get("messageBody")),
-		IncludeAttribKeys: query.Get("includeAttributeKeys") != "",
-		IncludeAttribVals: query.Get("includeAttributeValues") != "",
+		IncludeAttribKeys: query.Get("includeAttributeKeys") == "true",
+		IncludeAttribVals: query.Get("includeAttributeValues") == "true",
 		ServiceName:       strOrNil(query.Get("serviceName")),
 		TelemetryKey:      strOrNil(query.Get("telemetryKey")),
 		MinSeverity:       parseUintOrNil(query.Get("minSeverity")),
