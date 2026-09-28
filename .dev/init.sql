@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS otel_logs (
     CommitHash String MATERIALIZED LogAttributes['vcs.ref.head.revision'],
     ExplorvizEntityId String MATERIALIZED LogAttributes['explorviz.entity.id'],
     ExplorvizTelemetryKey String MATERIALIZED LogAttributes['explorviz.entity.telemetrykey'],
+    ExplorvizServiceName String MATERIALIZED LogAttributes['explorviz.service.name'],
     ExplorvizTokenId String MATERIALIZED LogAttributes['explorviz.token.id'],
     ExplorvizFuncName String MATERIALIZED LogAttributes['explorviz.code.function.name'],
 

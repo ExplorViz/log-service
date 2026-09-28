@@ -95,7 +95,7 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 	}
 
 	if params.ServiceName != nil {
-		conditions.WriteString(" AND ServiceName = @serviceName")
+		conditions.WriteString(" AND ExplorvizServiceName = @serviceName")
 		queryParams = append(queryParams, clickhouse.Named("serviceName", *params.ServiceName))
 	}
 
@@ -202,7 +202,7 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 			toString(LogId) AS ID,
 			Body AS MessageBody,
 			ExplorvizTelemetryKey AS TelemetryKey,
-			ServiceName,
+			ExplorvizServiceName AS ServiceName,
 			SeverityNumber AS Severity,
 			SeverityText,
 			Timestamp_ns AS TimeUnixNano,
