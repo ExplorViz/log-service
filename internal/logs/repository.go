@@ -8,6 +8,8 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	"github.com/ExplorViz/log-service/internal/instrumentation"
 )
 
 type Repository struct {
@@ -195,9 +197,7 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 		queryParams = append(queryParams, clickhouse.Named("limit", limit))
 	}
 
-	logs := []Log{}
-
-	err := r.Conn.Select(ctx, &logs, `
+	query := `
 		SELECT DISTINCT
 			toString(LogId) AS ID,
 			Body AS MessageBody,
@@ -214,7 +214,14 @@ func (r *Repository) findLogs(ctx context.Context, landscapeToken string, params
 		FROM otel_logs
 		WHERE
 			ExplorvizTokenId = @landscapeToken
-			`+conditions.String()+ordering+queryLimit, queryParams...)
+			` + conditions.String() + ordering + queryLimit
+
+	logs := []Log{}
+
+	span := instrumentation.StartClickHouseSpan(ctx, "SELECT otel_logs", query, queryParams)
+	defer span.End()
+
+	err := r.Conn.Select(ctx, &logs, query, queryParams...)
 	if err != nil {
 		return []Log{}, err
 	}
